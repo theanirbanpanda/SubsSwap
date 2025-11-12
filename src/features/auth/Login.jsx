@@ -18,13 +18,12 @@ const Login = () => {
   const handleEmailChange = (e) => {
     const value = e.target.value;
     setEmail(value);
-    setError(""); // Clear error on new input
+    setError(""); 
 
     const atIndex = value.indexOf("@");
     if (atIndex > 0) {
       const domainPart = value.substring(atIndex + 1);
       
-      // If user starts typing "g", "gm", etc. after "@"
       if (domainPart.length > 0 && "gmail.com".startsWith(domainPart)) {
         const remainingSuggestion = "gmail.com".substring(domainPart.length);
         if (remainingSuggestion) {
@@ -33,7 +32,6 @@ const Login = () => {
           setSuggestion(null);
         }
       } 
-      // If user just typed "@"
       else if (domainPart.length === 0) {
         setSuggestion("gmail.com");
       } 
@@ -49,31 +47,31 @@ const Login = () => {
     if (suggestion) {
       setEmail(email + suggestion);
       setSuggestion(null);
-      emailInputRef.current?.focus(); // Re-focus the input
+      emailInputRef.current?.focus();
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setError(""); // Clear previous errors
+    setError("");
 
-    // 1. Check for valid email
     if (!emailRegex.test(email)) {
       setError("Please enter a valid email address.");
       return;
     }
-
-    // 2. Check for password
-    if (password.trim() === "") {
-      setError("Please enter your password.");
+    if (!password) {
+      setError("Please enter a password.");
       return;
     }
-
-    // 3. Try to login (using email as the username)
-    // In a real app, you'd send this to a backend.
-    // We'll just log in with the email as the "user"
-    login(email.trim());
-    navigate("/");
+    
+    try {
+      // The login function now handles all validation
+      login(email, password);
+      navigate("/"); // Navigate only if login is successful
+    } catch (err) {
+      // Catch the error from AuthContext and display it
+      setError(err.message);
+    }
   };
 
   return (
@@ -86,7 +84,6 @@ const Login = () => {
         <p className="login-subtitle">Sign in to continue to SubSwap</p>
 
         <form onSubmit={handleSubmit} className="login-form" noValidate>
-          {/* Show login error */}
           {error && <div className="login-error">{error}</div>}
 
           <div className="input-group">
@@ -96,20 +93,19 @@ const Login = () => {
                 type="email"
                 id="email"
                 name="email"
-                placeholder="you@example.com"
+                placeholder="me@gmail.com"
                 autoComplete="email"
                 value={email}
                 onChange={handleEmailChange}
                 ref={emailInputRef}
                 required
               />
-              {/* This is the suggestion chip */}
               {suggestion && (
                 <button
                   type="button"
                   className="suggestion-chip"
                   onClick={applySuggestion}
-                  tabIndex="-1" // Make it not focusable with Tab
+                  tabIndex="-1"
                 >
                   {suggestion}
                 </button>
@@ -123,12 +119,12 @@ const Login = () => {
               type="password"
               id="password"
               name="password"
-              placeholder="••••••••"
+              placeholder="123"
               autoComplete="current-password"
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
-                setError(""); // Clear error on new input
+                setError("");
               }}
               required
             />
@@ -138,10 +134,6 @@ const Login = () => {
             Sign In
           </button>
         </form>
-
-        <p className="login-footer-link">
-          Don't have an account? <Link to="/signup">Sign up</Link>
-        </p>
       </div>
     </div>
   );

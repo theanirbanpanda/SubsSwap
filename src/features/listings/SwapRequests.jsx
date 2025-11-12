@@ -1,33 +1,125 @@
-import React, { useEffect, useState } from "react";
+import React, { useMemo } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../features/auth/AuthContext";
+import { useListings } from "../features/listings/ListingsContext";
 
-const SwapRequests = () => {
-  const [requests, setRequests] = useState([]);
-
-  useEffect(() => {
-    const stored = localStorage.getItem("swapRequests");
-    if (stored) {
-      try {
-        setRequests(JSON.parse(stored));
-      } catch (err) {
-        console.error("Invalid swapRequests in localStorage");
-      }
-    }
-  }, []);
+// A component for rendering a single request card
+const RequestCard = ({ request, type, onUpdate }) => {
+  const { fromUser, toUser, listingName, status } = request;
+  
+  // Get a specific class for the status badge
+  const statusClass = `status-${status.toLowerCase()}`;
+  
+  const getFriendlyName = (email) => {
+    if (!email) return "Unknown";
+    let name = email.split('@')[0];
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  };
 
   return (
-    <div style={{ padding: "1.5rem" }}>
-      <h2>Swap Requests</h2>
-      <ul style={{ paddingLeft: 0, listStyle: "none" }}>
-        {requests.map((req, idx) => (
-          <li key={idx} style={{ marginBottom: "1rem", background: "#f0f0f0", padding: "1rem", borderRadius: "6px" }}>
-            <div><strong>From:</strong> {req.from}</div>
-            <div><strong>Offer:</strong> {req.offer}</div>
-            <div><strong>Want:</strong> {req.want}</div>
-            <div><strong>Status:</strong> {req.status}</div>
-          </li>
-        ))}
-      </ul>
-      {requests.length === 0 && <p>No swap requests found.</p>}
+    <div className="request-card">
+      <div className="request-card-info">
+        <h4>{listingName}</h4>
+        {type === "sent" ? (
+          <p>
+            You sent a request to <strong>{getFriendlyName(toUser)}</strong>
+          </p>
+        ) : (
+          <p>
+            You received a request from <strong>{getFriendlyName(fromUser)}</strong>
+          </p>
+        )}
+      </div>
+      <div className="request-card-status">
+        <span className={`status-badge ${statusClass}`}>{status}</span>
+      </div>
+      {/* Show actions only for received, pending requests */}
+      {type === "received" && status === "pending" && (
+        <div className="request-card-actions">
+          <button
+            className="request-button decline"
+            onClick={() => onUpdate(request.id, "declined")}
+          >
+            Decline
+          </button>
+          <button
+            className="request-button accept"
+            onClick={() => onUpdate(request.id, "accepted")}
+          >
+            Accept
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const SwapRequests = () => {
+  const { user } = useAuth();
+  const { swapRequests, updateSwapRequest, isLoading } = useListings();
+
+  // This filters our requests based on the user's *email* (user.username)
+  const { sentRequests, receivedRequests } = useMemo(() => {
+    if (!user) return { sentRequests: [], receivedRequests: [] };
+    const sent = swapRequests.filter((req) => req.fromUser === user.username);
+    const received = swapRequests.filter((req) => req.toUser === user.username);
+    return { sentRequests, receivedRequests };
+  }, [swapRequests, user]);
+
+  const handleUpdateRequest = (requestId, newStatus) => {
+    updateSwapRequest(requestId, newStatus);
+  };
+
+  if (!user) {
+    return (
+      <div className="dashboard-container" style={{ textAlign: "center" }}>
+        <p>
+          Please <Link to="/login">log in</Link> to view your swap requests.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="swap-requests-page">
+      <div className="requests-container">
+        <h2>Requests You've Received</h2>
+        {isLoading ? (
+          <p>Loading requests...</p>
+        ) : receivedRequests.length === 0 ? (
+          <p className="no-requests-message">
+            You have not received any swap requests yet.
+          </p>
+        ) : (
+          <div className="request-list">
+            {receivedRequests.map((req) => (
+              <RequestCard
+                key={req.id}
+                request={req}
+                type="received"
+                onUpdate={handleUpdateRequest}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="requests-container">
+        <h2>Requests You've Sent</h2>
+        {isLoading ? (
+          <p>Loading requests...</p>
+        ) : sentRequests.length === 0 ? (
+          <p className="no-requests-message">
+            You have not sent any swap requests yet.
+          </p>
+        ) : (
+          <div className="request-list">
+            {sentRequests.map((req) => (
+              <RequestCard key={req.id} request={req} type="sent" />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -1,39 +1,56 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
+import { useListings } from "../features/listings/ListingsContext"; // Get chat functions
 
 const Chat = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const messageEndRef = useRef(null); // To auto-scroll
+  const messageEndRef = useRef(null);
+  
+  // Get chat functions from our context
+  const { chatMessages, addChatMessage, isLoading } = useListings();
 
   // Get info from the URL
   const topic = searchParams.get("topic") || "your swap";
-  const chatWithUser = searchParams.get("user") || "the owner";
+  const chatWithEmail = searchParams.get("user") || null;
 
-  // State for messages and the input box
+  // --- Create friendly name from email ---
+  const getFriendlyName = (email) => {
+    if (!email) return "Unknown";
+    let name = email.split('@')[0];
+    return name.charAt(0).toUpperCase() + name.slice(1);
+  };
+
+  const chatWithUser = getFriendlyName(chatWithEmail);
+
+  // State for the input box
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      sender: chatWithUser,
-      text: `Hey! I see you're interested in my ${topic} subscription.`,
-    },
-    // You can add more mock history here if you want
-  ]);
 
-  // Function to send a new message
-  const handleSend = (e) => {
+  // --- Filter messages for this specific chat thread ---
+  const currentThreadId = useMemo(() => {
+    if (!user || !chatWithEmail) return null;
+    return [user.username, chatWithEmail].sort().join('_');
+  }, [user, chatWithEmail]);
+
+  const messages = useMemo(() => {
+    if (!currentThreadId) return [];
+    return chatMessages.filter((msg) => msg.threadId === currentThreadId);
+  }, [chatMessages, currentThreadId]);
+  
+  // --- Handle sending a message ---
+  const handleSend = async (e) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || !currentThreadId) return;
 
     const newMessage = {
-      id: messages.length + 1,
-      sender: user.username, // 'you'
+      id: Date.now(),
+      threadId: currentThreadId,
+      sender: user.username, // Use the full email as the sender ID
       text: input.trim(),
     };
 
-    setMessages([...messages, newMessage]);
+    await addChatMessage(newMessage); // Send to context
     setInput(""); // Clear the input box
   };
 
@@ -42,14 +59,17 @@ const Chat = () => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  if (!user) {
-    return (
-      <div className="chat-page-container">
-        <p style={{ textAlign: "center", color: "var(--dark-text-secondary)" }}>
-          Please <Link to="/login">log in</Link> to view your chats.
-        </p>
-      </div>
-    );
+  // Handle a user landing on /chat without a query
+  if (!chatWithEmail) {
+     return (
+       <div className="chat-page-container">
+         <div className="chat-messages" style={{ justifyContent: 'center', alignItems: 'center'}}>
+           <p style={{ color: "var(--dark-text-secondary)", fontSize: "1.1rem" }}>
+             Select a swap request to start chatting.
+           </p>
+         </div>
+       </div>
+     );
   }
 
   return (
@@ -65,18 +85,26 @@ const Chat = () => {
       </div>
 
       <div className="chat-messages">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`message-bubble ${
-              msg.sender === user.username ? "self" : "other"
-            }`}
-          >
-            <strong>{msg.sender === user.username ? "You" : msg.sender}</strong>
-            <p>{msg.text}</p>
-          </div>
-        ))}
-        {/* This empty div is the target for auto-scrolling */}
+        {isLoading ? (
+          <p>Loading messages...</p>
+        ) : messages.length === 0 ? (
+          <p style={{ textAlign: "center", color: "var(--dark-text-secondary)"}}>
+            No messages yet. Say hello!
+          </p>
+        ) : (
+          messages.map((msg) => {
+            const isSelf = msg.sender === user.username;
+            return (
+              <div
+                key={msg.id}
+                className={`message-bubble ${isSelf ? "self" : "other"}`}
+              >
+                <strong>{isSelf ? "You" : getFriendlyName(msg.sender)}</strong>
+                <p>{msg.text}</p>
+              </div>
+            );
+          })
+        )}
         <div ref={messageEndRef} />
       </div>
 

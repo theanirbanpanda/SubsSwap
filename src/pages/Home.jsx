@@ -1,53 +1,41 @@
 import { useState } from "react";
 import { useAuth } from "../features/auth/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
+import { useListings } from "../features/listings/ListingsContext";
 import SubscriptionCard from "../components/SubscriptionCard";
 import SwapRequestModal from "../components/SwapRequestModal";
 
-// --- DUMMY DATA ---
-const dummyListings = [
-  { id: 1, name: "Hotstar", owner: "Priya", price: "149", logoUrl: "https://upload.wikimedia.org/wikipedia/commons/1/1e/Disney%2B_Hotstar_logo.svg", logoRequiresBg: true },
-  { id: 2, name: "SonyLIV", owner: "Rohan", price: "99", logoUrl: "https://upload.wikimedia.org/wikipedia/en/thumb/9/93/Sonyliv_app_logo.svg/1200px-Sonyliv_app_logo.svg.png", logoRequiresBg: true },
-  { id: 3, name: "Prime Video", owner: "Aisha", price: "129", logoUrl: "https://upload.wikimedia.org/wikipedia/commons/f/f0/Amazon_Prime_Video_logo.svg" },
-  { id: 4, name: "JioCinema", owner: "Vikram", price: "89", logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/JioCinema_logo.svg/1280px-JioCinema_logo.svg.png", logoRequiresBg: true },
-  { id: 5, name: "ZEE5", owner: "verified_user", price: "79", logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/ZEE5_logo.svg/1200px-ZEE5_logo.svg.png", logoRequiresBg: true },
-  { id: 6, name: "Netflix", owner: "Sneha", price: "199", logoUrl: "https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg" },
-  { id: 7, name: "Gaana", owner: "Amit", price: "49", logoUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Gaana_logo.svg/1200px-Gaana_logo.svg.png", logoRequiresBg: true },
-  { id: 8, name: "Spotify", owner: "Ravi", price: "119", logoUrl: "https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg" },
-];
-
-
-// --- LOGGED-OUT PROMOTIONAL PAGE (Unchanged) ---
-const LoginGate = ({ children }) => {
+// --- LOGGED-OUT PROMOTIONAL PAGE ---
+const LoggedOutHomePage = () => {
   const navigate = useNavigate();
-  return (
+  // --- UPDATED PROMO DATA ---
+  const promoListings = [
+    { id: 1, name: "Hotstar", owner: "priya@gmail.com", price: "149" },
+    { id: 2, name: "SonyLIV", owner: "rohan@example.com", price: "99" },
+    { id: 3, name: "Prime Video", owner: "aisha@example.com", price: "129" },
+    { id: 4, name: "JioCinema", owner: "vikram@example.com", price: "89" },
+    { id: 5, name: "ZEE5", owner: "verified_user@example.com", price: "79" },
+  ];
+
+  const LoginGate = ({ children }) => (
     <div className="login-gate" onClick={() => navigate("/login")}>
       <div className="login-gate-blur">{children}</div>
-      <div className="login-gate-overlay">
-        <span>Click to Log in</span>
-      </div>
+      <div className="login-gate-overlay"><span>Click to Log in</span></div>
     </div>
   );
-};
 
-const PromoCard = ({ listing }) => {
-  const navigate = useNavigate();
-  return (
+  const PromoCard = ({ listing }) => (
     <div className="promo-card" onClick={() => navigate("/login")}>
       <div className="promo-card-header">
         <h3>{listing.name}</h3>
-        <span>by {listing.owner}</span>
+        {/* We'll just show the first part of the email */}
+        <span>by {listing.owner.split('@')[0]}</span>
       </div>
       <div className="promo-card-price">
         Starts from <span>₹{listing.price}/mo</span>
       </div>
     </div>
   );
-};
-
-const LoggedOutHomePage = () => {
-  const visibleListings = dummyListings.slice(0, 5);
-  const hiddenListings = dummyListings.slice(5);
 
   return (
     <div className="landing-page">
@@ -85,14 +73,12 @@ const LoggedOutHomePage = () => {
       <section className="preview-section">
         <h2>Available for Swapping Now</h2>
         <div className="promo-grid">
-          {visibleListings.map((listing) => (
+          {promoListings.map((listing) => (
             <PromoCard key={listing.id} listing={listing} />
           ))}
-          {hiddenListings.map((listing) => (
-            <LoginGate key={listing.id}>
-              <PromoCard listing={listing} />
-            </LoginGate>
-          ))}
+          <LoginGate>
+            <PromoCard listing={{ id: 6, name: "Netflix", owner: "sneha@example.com", price: "199" }} />
+          </LoginGate>
         </div>
         <p className="preview-footer">
           ...and hundreds more.{" "}
@@ -112,31 +98,49 @@ const LoggedInHomePage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   
+  // --- RE-ADDING addSwapRequest and addChatMessage ---
+  const { listings, isLoading, addSwapRequest, addChatMessage } = useListings();
+  
   const [selectedListing, setSelectedListing] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const myUsername = user.username;
-  const availableListings = dummyListings.filter(
-    (listing) => listing.owner !== myUsername
+  const availableListings = listings.filter(
+    (listing) => listing.owner !== user.username
+  );
+
+  const filteredListings = availableListings.filter((listing) =>
+    listing.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    listing.owner.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleSwapClick = (listing) => {
     setSelectedListing(listing);
   };
-
   const handleCloseModal = () => {
     setSelectedListing(null);
   };
-
+  
   // --- THIS IS THE UPDATED FUNCTION ---
-  const handleConfirmSwap = () => {
-    if (!selectedListing) return; // Safety check
+  const handleConfirmSwap = async () => {
+    if (!selectedListing) return;
 
-    // Create the search params for the chat URL
+    // 1. Create the official swap request
+    await addSwapRequest(selectedListing, user);
+    
+    // 2. Create the first chat message for this swap
+    const firstMessage = {
+      id: Date.now(),
+      // The "threadId" will be the two user emails sorted alphabetically
+      threadId: [user.username, selectedListing.owner].sort().join('_'),
+      sender: user.username,
+      text: `Hi ${selectedListing.owner.split('@')[0]}! I'm interested in swapping for your ${selectedListing.name}.`
+    };
+    await addChatMessage(firstMessage);
+    
+    // 3. Navigate to chat
     const topic = encodeURIComponent(selectedListing.name);
     const userToChatWith = encodeURIComponent(selectedListing.owner);
-    
     handleCloseModal();
-    // Navigate to the chat page with the info in the URL
     navigate(`/chat?topic=${topic}&user=${userToChatWith}`); 
   };
 
@@ -146,15 +150,42 @@ const LoggedInHomePage = () => {
       <p className="dashboard-subtitle">
         Browse subscriptions available for swapping from other users.
       </p>
-      <div className="dashboard-grid">
-        {availableListings.map((listing) => (
-          <SubscriptionCard 
-            key={listing.id} 
-            listing={listing}
-            onSwap={handleSwapClick}
-          />
-        ))}
+
+      <div className="dashboard-search-bar">
+        <input
+          type="text"
+          placeholder="Search by name or owner (e.g., 'Netflix' or 'priya@gmail.com')"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
       </div>
+      
+      {isLoading ? (
+        <p>Loading subscriptions...</p>
+      ) : (
+        <>
+          {filteredListings.length > 0 ? (
+            <div className="dashboard-grid">
+              {filteredListings.map((listing) => (
+                <SubscriptionCard 
+                  key={listing.id} 
+                  listing={listing}
+                  variant="browse"
+                  onSwap={handleSwapClick}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="no-listings-message">
+              {searchQuery.length > 0 ? (
+                `No results found for "${searchQuery}".`
+              ) : (
+                "No subscriptions are available for swapping right now."
+              )}
+            </div>
+          )}
+        </>
+      )}
 
       <SwapRequestModal
         listing={selectedListing}
