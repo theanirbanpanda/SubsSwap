@@ -10,26 +10,29 @@ const Navbar = () => {
     navigate("/login");
   };
 
-  // Return null if user is not logged in (to hide on landing/login page)
-  if (!user) {
-    return null;
-  }
-
   return (
     <nav className="main-app-header">
       <Link to="/" className="nav-logo">
         SubSwap
       </Link>
-      <div className="nav-links">
-        <Link to="/">Home</Link>
-        <Link to="/my-subscriptions">My Subscriptions</Link>
-        <Link to="/swap-requests">Swap Requests</Link>  {/* <-- RE-ADDING LINK */}
-        <Link to="/chat">Chat</Link>
-        <Link to="/profile">Profile</Link>
-        <button onClick={handleLogout} className="nav-button">
-          Logout
-        </button>
-      </div>
+      {user ? (
+        <div className="nav-links">
+          <Link to="/">Home</Link>
+          <Link to="/my-subscriptions">My Subscriptions</Link>
+          <Link to="/swap-requests">Swap Requests</Link>  {/* <-- RE-ADDING LINK */}
+          <Link to="/chat">Chat</Link>
+          <Link to="/profile">Profile</Link>
+          <button onClick={handleLogout} className="nav-button">
+            Logout
+          </button>
+        </div>
+      ) : (
+        <div className="nav-links">
+          <Link to="/login" className="nav-button">
+            Login
+          </Link>
+        </div>
+      )}
     </nav>
   );
 };

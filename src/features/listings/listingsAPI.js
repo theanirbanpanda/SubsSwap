@@ -23,7 +23,7 @@ export const getListings = () => {
   let listings = JSON.parse(localStorage.getItem(STORAGE_KEY));
   
   // This is the correct, fixed logic
-  if (!listings || listings.length === 0) {
+  if (!listings) {
     listings = INITIAL_DUMMY_DATA;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(listings));
     // Clear other keys ONLY when seeding
