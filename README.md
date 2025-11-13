@@ -122,6 +122,11 @@ Add notifications for chat and requests
 SubSwap started as a small idea to solve a problem I personally face — paying for too many subscriptions.
 This prototype is my attempt to show how a simple, community-driven marketplace could fix that.
 
+
+Check this webapp demo here:
+https://app.netlify.com/projects/subswapp/overview
+
+
 License: MIT
 
 © 2025 Anirban Panda
