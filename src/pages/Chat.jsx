@@ -1,16 +1,12 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { useAuth } from "../features/auth/AuthContext";
-import { useListings } from "../features/listings/ListingsContext"; // Get chat functions
 
 const Chat = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const messageEndRef = useRef(null);
   
-  // Get chat functions from our context
-  const { chatMessages, addChatMessage, isLoading } = useListings();
-
   // Get info from the URL
   const topic = searchParams.get("topic") || "your swap";
   const chatWithEmail = searchParams.get("user") || null;
@@ -23,34 +19,32 @@ const Chat = () => {
   };
 
   const chatWithUser = getFriendlyName(chatWithEmail);
+  const myFriendlyName = user ? getFriendlyName(user.username) : "You";
 
-  // State for the input box
+  // --- FAKE CHAT ---
+  // We use simple useState here. This is NOT persistent,
+  // but it will work for the demo.
   const [input, setInput] = useState("");
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      sender: chatWithUser,
+      text: `Hey! I see you're interested in my ${topic} subscription.`,
+    },
+  ]);
 
-  // --- Filter messages for this specific chat thread ---
-  const currentThreadId = useMemo(() => {
-    if (!user || !chatWithEmail) return null;
-    return [user.username, chatWithEmail].sort().join('_');
-  }, [user, chatWithEmail]);
-
-  const messages = useMemo(() => {
-    if (!currentThreadId) return [];
-    return chatMessages.filter((msg) => msg.threadId === currentThreadId);
-  }, [chatMessages, currentThreadId]);
-  
-  // --- Handle sending a message ---
-  const handleSend = async (e) => {
+  // Function to send a new message
+  const handleSend = (e) => {
     e.preventDefault();
-    if (!input.trim() || !currentThreadId) return;
+    if (!input.trim()) return;
 
     const newMessage = {
-      id: Date.now(),
-      threadId: currentThreadId,
-      sender: user.username, // Use the full email as the sender ID
+      id: messages.length + 1,
+      sender: myFriendlyName, // Use friendly name
       text: input.trim(),
     };
 
-    await addChatMessage(newMessage); // Send to context
+    setMessages([...messages, newMessage]);
     setInput(""); // Clear the input box
   };
 
@@ -65,7 +59,7 @@ const Chat = () => {
        <div className="chat-page-container">
          <div className="chat-messages" style={{ justifyContent: 'center', alignItems: 'center'}}>
            <p style={{ color: "var(--dark-text-secondary)", fontSize: "1.1rem" }}>
-             Select a swap request to start chatting.
+             Select a chat from your Swap Requests to begin.
            </p>
          </div>
        </div>
@@ -85,26 +79,18 @@ const Chat = () => {
       </div>
 
       <div className="chat-messages">
-        {isLoading ? (
-          <p>Loading messages...</p>
-        ) : messages.length === 0 ? (
-          <p style={{ textAlign: "center", color: "var(--dark-text-secondary)"}}>
-            No messages yet. Say hello!
-          </p>
-        ) : (
-          messages.map((msg) => {
-            const isSelf = msg.sender === user.username;
-            return (
-              <div
-                key={msg.id}
-                className={`message-bubble ${isSelf ? "self" : "other"}`}
-              >
-                <strong>{isSelf ? "You" : getFriendlyName(msg.sender)}</strong>
-                <p>{msg.text}</p>
-              </div>
-            );
-          })
-        )}
+        {messages.map((msg) => {
+          const isSelf = msg.sender === myFriendlyName;
+          return (
+            <div
+              key={msg.id}
+              className={`message-bubble ${isSelf ? "self" : "other"}`}
+            >
+              <strong>{msg.sender}</strong>
+              <p>{msg.text}</p>
+            </div>
+          );
+        })}
         <div ref={messageEndRef} />
       </div>
 

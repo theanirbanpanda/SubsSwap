@@ -1,7 +1,5 @@
 // A single key for all subscriptions in localStorage
 const STORAGE_KEY = "subswap_all_listings";
-const SWAP_REQUESTS_KEY = "subswap_all_requests"; // --- RE-ADDING ---
-const CHAT_MESSAGES_KEY = "subswap_chat_messages"; // --- RE-ADDING ---
 
 // --- THE FULL DUMMY DATA ---
 const INITIAL_DUMMY_DATA = [
@@ -22,13 +20,14 @@ const INITIAL_DUMMY_DATA = [
 export const getListings = () => {
   let listings = JSON.parse(localStorage.getItem(STORAGE_KEY));
   
-  // This is the correct, fixed logic
+  // This is the correct, fixed logic that will restore your 8 listings
   if (!listings) {
     listings = INITIAL_DUMMY_DATA;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(listings));
-    // Clear other keys ONLY when seeding
-    localStorage.removeItem(SWAP_REQUESTS_KEY);
-    localStorage.removeItem(CHAT_MESSAGES_KEY);
+    // Clear the broken keys one last time
+    localStorage.removeItem("subswap_all_requests");
+    localStorage.removeItem("subswap_chat_messages");
+    localStorage.removeItem("subswap_data_version");
   }
   return Promise.resolve(listings);
 };
@@ -58,63 +57,5 @@ export const deleteListing = async (listingId) => {
   let listings = await getListings();
   const updatedListings = listings.filter((l) => l.id !== listingId);
   localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedListings));
-  return true;
-};
-
-
-// --- RE-ADDING SWAP REQUEST FUNCTIONS ---
-
-export const getSwapRequests = async () => {
-  const requests = JSON.parse(localStorage.getItem(SWAP_REQUESTS_KEY) || "[]");
-  return Promise.resolve(requests);
-};
-
-export const addSwapRequest = async (listing, fromUser) => {
-  const allRequests = await getSwapRequests();
-
-  const existingRequest = allRequests.find(
-    (req) =>
-      req.listingId === listing.id &&
-      req.fromUser === fromUser.username &&
-      req.status === "pending"
-  );
-
-  if (existingRequest) return false;
-
-  const newRequest = {
-    id: Date.now(),
-    fromUser: fromUser.username,
-    toUser: listing.owner,
-    listingId: listing.id,
-    listingName: listing.name,
-    status: "pending",
-  };
-
-  const updatedRequests = [newRequest, ...allRequests];
-  localStorage.setItem(SWAP_REQUESTS_KEY, JSON.stringify(updatedRequests));
-  return true;
-};
-
-export const updateSwapRequestStatus = async (requestId, newStatus) => {
-  const allRequests = await getSwapRequests();
-  const updatedRequests = allRequests.map((req) =>
-    req.id === requestId ? { ...req, status: newStatus } : req
-  );
-  localStorage.setItem(SWAP_REQUESTS_KEY, JSON.stringify(updatedRequests));
-  return true;
-};
-
-
-// --- RE-ADDING CHAT MESSAGE FUNCTIONS ---
-
-export const getChatMessages = async () => {
-  const messages = JSON.parse(localStorage.getItem(CHAT_MESSAGES_KEY) || "[]");
-  return Promise.resolve(messages);
-};
-
-export const addChatMessage = async (message) => {
-  const allMessages = await getChatMessages();
-  const updatedMessages = [...allMessages, message];
-  localStorage.setItem(CHAT_MESSAGES_KEY, JSON.stringify(updatedMessages));
   return true;
 };

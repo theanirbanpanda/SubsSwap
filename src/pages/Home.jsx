@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../features/auth/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
 import { useListings } from "../features/listings/ListingsContext";
@@ -93,26 +93,29 @@ const LoggedOutHomePage = () => {
 };
 
 
-// --- LOGGED-IN DASHBOARD (UPDATED) ---
+// --- LOGGED-IN DASHBOARD ---
 const LoggedInHomePage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   
-  // --- RE-ADDING addSwapRequest and addChatMessage ---
-  const { listings, isLoading, addSwapRequest, addChatMessage } = useListings();
+  // Get all listings from the simplified context
+  const { listings, isLoading } = useListings();
   
   const [selectedListing, setSelectedListing] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // This filter is CORRECT and now runs on the FULL list of listings
   const availableListings = listings.filter(
     (listing) => listing.owner !== user.username
   );
 
+  // Filter the list based on the search query
   const filteredListings = availableListings.filter((listing) =>
     listing.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     listing.owner.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Modal Functions
   const handleSwapClick = (listing) => {
     setSelectedListing(listing);
   };
@@ -120,24 +123,12 @@ const LoggedInHomePage = () => {
     setSelectedListing(null);
   };
   
-  // --- THIS IS THE UPDATED FUNCTION ---
-  const handleConfirmSwap = async () => {
+  // --- THIS FUNCTION IS NOW SIMPLIFIED ---
+  const handleConfirmSwap = () => {
     if (!selectedListing) return;
-
-    // 1. Create the official swap request
-    await addSwapRequest(selectedListing, user);
     
-    // 2. Create the first chat message for this swap
-    const firstMessage = {
-      id: Date.now(),
-      // The "threadId" will be the two user emails sorted alphabetically
-      threadId: [user.username, selectedListing.owner].sort().join('_'),
-      sender: user.username,
-      text: `Hi ${selectedListing.owner.split('@')[0]}! I'm interested in swapping for your ${selectedListing.name}.`
-    };
-    await addChatMessage(firstMessage);
-    
-    // 3. Navigate to chat
+    // 1. No longer creates a swap request
+    // 2. Just navigates to chat
     const topic = encodeURIComponent(selectedListing.name);
     const userToChatWith = encodeURIComponent(selectedListing.owner);
     handleCloseModal();

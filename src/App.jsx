@@ -7,7 +7,7 @@ import Home from "./pages/Home";
 import MySubscriptions from "./pages/MySubscriptions";
 import Chat from "./pages/Chat";
 import Profile from "./pages/Profile";
-import SwapRequests from "./pages/SwapRequests"; // <-- RE-ADDING IMPORT
+import SwapRequests from "./pages/SwapRequests"; // <-- IMPORT THE PAGE
 
 const App = () => {
   return (
@@ -19,7 +19,7 @@ const App = () => {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/my-subscriptions" element={<MySubscriptions />} />
-            <Route path="/swap-requests" element={<SwapRequests />} /> {/* <-- RE-ADDING ROUTE */}
+            <Route path="/swap-requests" element={<SwapRequests />} /> {/* <-- ADD THE ROUTE */}
             <Route path="/chat" element={<Chat />} />
             <Route path="/profile" element={<Profile />} />
           </Routes>
