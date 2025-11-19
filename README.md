@@ -124,7 +124,7 @@ This prototype is my attempt to show how a simple, community-driven marketplace 
 
 
 Check this webapp demo here:
-https://app.netlify.com/projects/subswapp/overview
+https://subswapp.netlify.app
 
 
 License: MIT
